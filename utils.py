@@ -11,16 +11,18 @@ FLAGS = flags.FLAGS
 
 ## Image helper
 def get_images(paths, labels, nb_samples=None, shuffle=True):
-    if nb_samples is not None:
-        sampler = lambda x: random.sample(x, nb_samples)
-    else:
-        sampler = lambda x: x
-    images = [(i, os.path.join(path, image)) \
-        for i, path in zip(labels, paths) \
-        for image in sampler(os.listdir(path))]
-    if shuffle:
-        random.shuffle(images)
-    return images
+    sampler = lambda x: random.sample(x, min(len(x), nb_samples))  # Avoid error
+
+    for path in paths:
+        files = os.listdir(path)
+        print(f"Checking folder: {path} - {len(files)} images available, {nb_samples} needed")
+
+        if len(files) < nb_samples:
+            print(f"⚠️ WARNING: Not enough images in {path}. Found {len(files)}, expected {nb_samples}")
+
+    return [(os.path.join(path, image), i) 
+            for i, path in zip(labels, paths) 
+            for image in sampler(os.listdir(path))]
 
 ## Network helpers
 def conv_block(inp, cweight, bweight, reuse, scope, activation=tf.nn.relu, max_pool_pad='VALID', residual=False):

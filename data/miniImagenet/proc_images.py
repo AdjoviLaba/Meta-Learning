@@ -12,12 +12,13 @@ from __future__ import print_function
 import csv
 import glob
 import os
-
 from PIL import Image
 
+# Path to the images folder
 path_to_images = 'images/'
 
-all_images = glob.glob(path_to_images + '*')
+# Recursively find all images in subdirectories
+all_images = glob.glob(path_to_images + '**/*.JPEG', recursive=True)
 
 # Resize images
 for i, image_file in enumerate(all_images):
@@ -25,22 +26,32 @@ for i, image_file in enumerate(all_images):
     im = im.resize((84, 84), resample=Image.LANCZOS)
     im.save(image_file)
     if i % 500 == 0:
-        print(i)
+        print(f"Resized {i} images")
 
-# Put in correct directory
+# Put images in the correct directory based on the CSV files
 for datatype in ['train', 'val', 'test']:
-    os.system('mkdir ' + datatype)
+    # Create the main directory for the datatype (train, val, test)
+    os.makedirs(datatype, exist_ok=True)
 
+    # Open the CSV file for the datatype
     with open(datatype + '.csv', 'r') as f:
         reader = csv.reader(f, delimiter=',')
-        last_label = ''
-        for i, row in enumerate(reader):
-            if i == 0:  # skip the headers
-                continue
-            label = row[1]
-            image_name = row[0]
-            if label != last_label:
-                cur_dir = datatype + '/' + label + '/'
-                os.system('mkdir ' + cur_dir)
-                last_label = label
-            os.system('mv images/' + image_name + ' ' + cur_dir)
+        next(reader)  # Skip the header row
+
+        for row in reader:
+            image_path = row[0]  # First column is the image path (e.g., n01532829/n01532829_721.JPEG)
+            label_name = row[1]  # Second column is the label name
+
+            # Construct the source path (relative to the images folder)
+            source_path = os.path.join(path_to_images, image_path)
+
+            # Construct the target directory and path
+            target_dir = os.path.join(datatype, label_name)
+            os.makedirs(target_dir, exist_ok=True)  # Create the label directory if it doesn't exist
+            target_path = os.path.join(target_dir, os.path.basename(image_path))
+
+            # Move the image to the target directory
+            if os.path.exists(source_path):
+                os.rename(source_path, target_path)
+            else:
+                print(f"Warning: {source_path} does not exist. Skipping.")
