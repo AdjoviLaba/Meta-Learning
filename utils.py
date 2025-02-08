@@ -24,19 +24,30 @@ def get_images(paths, labels, nb_samples=None, shuffle=True):
             for i, path in zip(labels, paths) 
             for image in sampler(os.listdir(path))]
 
-## Network helpers
-def conv_block(inp, cweight, bweight, reuse, scope, activation=tf.nn.relu, max_pool_pad='VALID', residual=False):
-    """ Perform, conv, batch norm, nonlinearity, and max pool """
-    stride, no_stride = [1,2,2,1], [1,1,1,1]
+import tensorflow as tf
 
-    if FLAGS.max_pool:
-        conv_output = tf.nn.conv2d(inp, cweight, no_stride, 'SAME') + bweight
-    else:
-        conv_output = tf.nn.conv2d(inp, cweight, stride, 'SAME') + bweight
+def conv_block(inp, cweight, bweight, reuse, scope, activation=tf.nn.leaky_relu, max_pool_pad='VALID', residual=False):
+    """ Perform conv, batch norm, nonlinearity, dropout, and max pool """
+
+    # Define stride settings
+    stride, no_stride = [1, 2, 2, 1], [1, 1, 1, 1]
+
+    # Apply convolution
+    conv_output = tf.nn.conv2d(inp, cweight, no_stride if FLAGS.max_pool else stride, 'SAME') + bweight
+
+    # Normalize (Batch Norm or Layer Norm)
     normed = normalize(conv_output, activation, reuse, scope)
+
+    # Apply dropout (only during training)
+    if FLAGS.train:  
+        normed = tf.nn.dropout(normed, rate=0.3)  # Drop 30% of neurons
+
+    # Apply max pooling if enabled
     if FLAGS.max_pool:
-        normed = tf.nn.max_pool(normed, stride, stride, max_pool_pad)
+        normed = tf.nn.max_pool(normed, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding=max_pool_pad)
+
     return normed
+
 
 def normalize(inp, activation, reuse, scope):
     if FLAGS.norm == 'batch_norm':

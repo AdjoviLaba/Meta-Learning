@@ -207,8 +207,10 @@ class MAML:
             weights['b5'] = tf.Variable(tf.zeros([self.dim_output]), name='b5')
         return weights
 
+
+
     def forward_conv(self, inp, weights, reuse=False, scope=''):
-        # reuse is for the normalization parameters.
+        """ Forward pass through convolutional network, handling dynamic shapes. """
         channels = self.channels
         inp = tf.reshape(inp, [-1, self.img_size, self.img_size, channels])
 
@@ -216,12 +218,16 @@ class MAML:
         hidden2 = conv_block(hidden1, weights['conv2'], weights['b2'], reuse, scope+'1')
         hidden3 = conv_block(hidden2, weights['conv3'], weights['b3'], reuse, scope+'2')
         hidden4 = conv_block(hidden3, weights['conv4'], weights['b4'], reuse, scope+'3')
-        if FLAGS.datasource == 'miniimagenet':
-            # last hidden layer is 6x6x64-ish, reshape to a vector
-            hidden4 = tf.reshape(hidden4, [-1, np.prod([int(dim) for dim in hidden4.get_shape()[1:]])])
-        else:
-            hidden4 = tf.reduce_mean(hidden4, [1, 2])
 
-        return tf.matmul(hidden4, weights['w5']) + weights['b5']
+        # Fix: Dynamically determine the flattened size
+        hidden4_shape = hidden4.get_shape().as_list()
+        flattened_dim = np.prod(hidden4_shape[1:])  # Compute correct feature size dynamically
+
+        # Properly reshape before MatMul
+        hidden4_flattened = tf.reshape(hidden4, [-1, flattened_dim])
+
+        return tf.matmul(hidden4_flattened, weights['w5']) + weights['b5']
+
+
 
 

@@ -30,6 +30,7 @@ import numpy as np
 import pickle
 import random
 import tensorflow as tf
+import os
 
 from data_generator import DataGenerator
 from maml import MAML
@@ -203,8 +204,12 @@ def test(model, saver, sess, exp_string, data_generator, test_num_updates=None):
     print('Mean validation accuracy/loss, stddev, and confidence intervals')
     print((means, stds, ci95))
 
-    out_filename = FLAGS.logdir +'/'+ exp_string + '/' + 'test_ubs' + str(FLAGS.update_batch_size) + '_stepsize' + str(FLAGS.update_lr) + '.csv'
-    out_pkl = FLAGS.logdir +'/'+ exp_string + '/' + 'test_ubs' + str(FLAGS.update_batch_size) + '_stepsize' + str(FLAGS.update_lr) + '.pkl'
+    out_dir = FLAGS.logdir + '/' + exp_string  # Define the directory
+    os.makedirs(out_dir, exist_ok=True)  # Create the directory if it does not exist
+
+    out_filename = out_dir + '/' + 'test_ubs' + str(FLAGS.update_batch_size) + '_stepsize' + str(FLAGS.update_lr) + '.csv'
+    out_pkl = out_dir + '/' + 'test_ubs' + str(FLAGS.update_batch_size) + '_stepsize' + str(FLAGS.update_lr) + '.pkl'
+
     with open(out_pkl, 'wb') as f:
         pickle.dump({'mses': metaval_accuracies}, f)
     with open(out_filename, 'w') as f:
